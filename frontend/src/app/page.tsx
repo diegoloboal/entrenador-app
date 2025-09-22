@@ -11,7 +11,7 @@ import ClientIntakeForm from "@/components/ClientIntakeForm"
 export default function HomePage() {
   return (
     <>
-      <Navbar />
+
 
       <Hero />
       <Process />
@@ -43,7 +43,7 @@ export default function HomePage() {
 
 
 
-      <section id="cuestionario" className="border-t border-slate-800 bg-slate-900 py-16">
+     {/*  <section id="cuestionario" className="border-t border-slate-800 bg-slate-900 py-16">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-2xl font-bold">Cuestionario inicial</h2>
           <p className="mt-2 text-slate-300">Rellena estos datos para poder proponerte el plan adecuado.</p>
@@ -51,7 +51,7 @@ export default function HomePage() {
             <ClientIntakeForm />
           </div>
         </div>
-      </section>
+      </section>*/}
 
   
       {/* CTA contacto */}

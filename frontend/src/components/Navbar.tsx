@@ -9,6 +9,10 @@ export default function Navbar() {
           Entrenador<span className="text-cyan-400">Pro</span>
         </Link>
 
+        <Link href="/cuestionario" className="hover:opacity-80">
+          Cuestionario
+        </Link>
+
         <div className="hidden gap-6 text-sm text-slate-300 sm:flex">
           <a href="#metodo" className="hover:text-cyan-400">Metodo</a>
           <a href="#programas" className="hover:text-cyan-400">Programas</a>

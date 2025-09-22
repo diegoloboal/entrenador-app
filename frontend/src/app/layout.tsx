@@ -2,6 +2,7 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import Navbar from "@/components/Navbar"
 import WhatsAppFloat from "@/components/WhatsAppFloat"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -23,9 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="absolute -top-48 left-1/2 h-[700px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.25),transparent_60%)] blur-3xl" />
         </div>
 
+        {/* Navbar global, pegado arriba */}
+        <Navbar />
+
+        {/* Contenido de cada página */}
         {children}
 
-        {/* Boton flotante WhatsApp */}
+        {/* Botón flotante WhatsApp */}
         <WhatsAppFloat
           phone="34608810961"
           message="Hola, vengo desde la web y me gustaria info del programa"
