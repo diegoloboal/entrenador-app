@@ -1,4 +1,6 @@
-// src/app/api/intake/route.ts
+// frontend/src/app/api/intake/route.ts
+import { Redis } from "@upstash/redis";            // ⬅️ NUEVO
+const redis = Redis.fromEnv();                      // ⬅️ NUEVO
 
 type Obj = "perder_peso" | "ganar_masa" | "rendimiento" | "recuperacion_lesion"
 type Dias = "1" | "2" | "3" | "4" | "5"
@@ -57,24 +59,30 @@ export async function POST(req: Request) {
     const { leadScore, leadTier, categoria } = scoreLead(body)
     const payload = { ...body, categoria, leadScore, leadTier, submittedAt: new Date().toISOString() }
 
-    // 1) Enviar al backend Spring
+    // === 1) Enviar al backend Spring; si falla, ENCOLAR ===
     const api = process.env.API_URL
     if (!api) return new Response("Falta API_URL", { status: 500 })
-    const toSpring = await fetch(`${api}/api/leads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    const springText = await toSpring.text()
-    if (!toSpring.ok) {
-      // si falla Spring, devolvemos error (priorizamos la BD)
-      return new Response(`API error: ${springText}`, { status: 502 })
+
+    let sentToSpring = false
+    try {
+      const r = await fetch(`${api}/api/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      sentToSpring = r.ok
+      if (!r.ok) {
+        // fallo 4xx/5xx -> guardamos en cola
+        await redis.rpush("leads:queue", JSON.stringify(payload))
+      }
+    } catch {
+      // fallo de red/Render dormido -> guardamos en cola
+      await redis.rpush("leads:queue", JSON.stringify(payload))
     }
 
-    // 2) (Opcional) Guardar también en Google Sheets
+    // 2) (Opcional) Guardar también en Google Sheets (no rompe la petición si falla)
     const sheetsUrl = process.env.SHEETS_WEBAPP_URL
     if (sheetsUrl) {
-      // no rompemos la petición si Sheets falla: lo intentamos y seguimos
       try {
         await fetch(sheetsUrl, {
           method: "POST",
@@ -84,7 +92,8 @@ export async function POST(req: Request) {
       } catch { /* swallow */ }
     }
 
-    return Response.json({ ok: true, leadScore, leadTier })
+    // Respondemos OK siempre; si no se pudo enviar, queda en cola
+    return Response.json({ ok: true, leadScore, leadTier, queued: !sentToSpring })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error"
     return new Response(msg, { status: 500 })
