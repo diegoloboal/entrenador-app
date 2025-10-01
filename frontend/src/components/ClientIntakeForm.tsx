@@ -112,7 +112,7 @@ export default function ClientIntakeForm() {
 
       {/* Objetivo principal */}
       <label className="grid gap-1 text-sm">
-        <span className="text-slate-300">Objetivo principal</span>
+        <span className="text-slate-300">Objetivoooooooooo principal</span>
         <select
           value={data.objetivoPrincipal}
           onChange={(e) =>
