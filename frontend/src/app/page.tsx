@@ -1,10 +1,9 @@
 // src/app/page.tsx
-import Navbar from "@/components/Navbar"
 import Hero from "@/components/Hero"
 import Process from "@/components/Process"
 import FAQ from "@/components/FAQ"
 import AboutCoach from "@/components/AboutCoach"
-import ClientIntakeForm from "@/components/ClientIntakeForm"
+
 
 
 

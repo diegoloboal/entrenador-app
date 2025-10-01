@@ -1,6 +1,13 @@
-import { Redis } from "@upstash/redis";
-const redis = Redis.fromEnv(); // lee UPSTASH_REDIS_REST_URL/TOKEN
+//import { Redis } from "@upstash/redis";
+//const redis = Redis.fromEnv(); // lee UPSTASH_REDIS_REST_URL/TOKEN
 
+// frontend/src/app/api/queue/drain/route.ts
+export async function GET() {
+  return Response.json({ ok: true, where: "/api/queue/drain" });
+}
+
+
+/*
 export async function GET(req: Request) {
   // Permite el cron de Vercel (añade x-vercel-cron) o una llamada manual con ?secret=...
   const isCron = req.headers.get("x-vercel-cron") === "1";
@@ -35,3 +42,4 @@ export async function GET(req: Request) {
 
   return Response.json({ processed });
 }
+*/
