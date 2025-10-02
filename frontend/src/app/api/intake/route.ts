@@ -1,6 +1,6 @@
 // frontend/src/app/api/intake/route.ts
-import { Redis } from "@upstash/redis";            
-const redis = Redis.fromEnv();                      
+import { Redis } from "@upstash/redis";
+const redis = Redis.fromEnv();
 
 type Obj = "perder_peso" | "ganar_masa" | "rendimiento" | "recuperacion_lesion"
 type Dias = "1" | "2" | "3" | "4" | "5"
@@ -49,6 +49,17 @@ function scoreLead(b: Partial<IntakePayload>) {
   return { leadScore, leadTier, categoria }
 }
 
+// ⬇️ helper de timeout
+function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit & { timeoutMs?: number } = {}
+) {
+  const { timeoutMs = 8000, ...rest } = init;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(input, { ...rest, signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Partial<IntakePayload>
@@ -59,40 +70,36 @@ export async function POST(req: Request) {
     const { leadScore, leadTier, categoria } = scoreLead(body)
     const payload = { ...body, categoria, leadScore, leadTier, submittedAt: new Date().toISOString() }
 
-    // === 1) Enviar al backend Spring; si falla, ENCOLAR ===
     const api = process.env.API_URL
     if (!api) return new Response("Falta API_URL", { status: 500 })
 
+    // === Enviar al backend con TIMEOUT; si falla/tarda, ENCOLAR ===
     let sentToSpring = false
     try {
-      const r = await fetch(`${api}/api/leads`, {
+      const r = await fetchWithTimeout(`${api}/api/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        timeoutMs: 8000,
       })
       sentToSpring = r.ok
       if (!r.ok) {
-        // fallo 4xx/5xx -> guardamos en cola
         await redis.rpush("leads:queue", JSON.stringify(payload))
       }
     } catch {
-      // fallo de red/Render dormido -> guardamos en cola
       await redis.rpush("leads:queue", JSON.stringify(payload))
     }
 
-    // 2) (Opcional) Guardar también en Google Sheets (no rompe la petición si falla)
+    // (Opcional) Google Sheets en fire-and-forget
     const sheetsUrl = process.env.SHEETS_WEBAPP_URL
     if (sheetsUrl) {
-      try {
-        await fetch(sheetsUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-      } catch { /* swallow */ }
+      fetch(sheetsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
     }
 
-    // Respondemos OK siempre; si no se pudo enviar, queda en cola
     return Response.json({ ok: true, leadScore, leadTier, queued: !sentToSpring })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error"

@@ -1,41 +1,39 @@
 // src/components/ClientIntakeForm.tsx
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 
 // ---- Tipos del formulario ----
 type FormData = {
-  nombre: string
-  email: string
+  nombre: string;
+  email: string;
 
-  objetivoPrincipal: "perder_peso" | "ganar_masa" | "rendimiento" | "recuperacion_lesion"
-  compromisoDias: "1" | "2" | "3" | "4" | "5"
-  capacidadEconomica: "nunca" | "menos_50" | "50_100" | "100_mas"
-  urgencia: "prisa" | "3_6" | "sin_prisa"
+  objetivoPrincipal: "perder_peso" | "ganar_masa" | "rendimiento" | "recuperacion_lesion";
+  compromisoDias: "1" | "2" | "3" | "4" | "5";
+  capacidadEconomica: "nunca" | "menos_50" | "50_100" | "100_mas";
+  urgencia: "prisa" | "3_6" | "sin_prisa";
 
-  lesiones: string
-  disponibilidad: string
-  material: string
-  mensaje: string
-}
+  lesiones: string;
+  disponibilidad: string;
+  material: string;
+  mensaje: string;
+};
 
 const init: FormData = {
   nombre: "",
   email: "",
-
   objetivoPrincipal: "perder_peso",
   compromisoDias: "3",
   capacidadEconomica: "nunca",
   urgencia: "3_6",
-
   lesiones: "",
   disponibilidad: "",
   material: "",
   mensaje: "",
-}
+};
 
-// ---- Componentes de input (definidos fuera para no perder el foco) ----
-type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { label: string }
+// ---- Componentes de input ----
+type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { label: string };
 function Input({ label, ...rest }: InputProps) {
   return (
     <label className="grid gap-1 text-sm">
@@ -45,10 +43,10 @@ function Input({ label, ...rest }: InputProps) {
         className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
       />
     </label>
-  )
+  );
 }
 
-type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }
+type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string };
 function Textarea({ label, ...rest }: TextareaProps) {
   return (
     <label className="grid gap-1 text-sm">
@@ -58,34 +56,52 @@ function Textarea({ label, ...rest }: TextareaProps) {
         className="min-h-[90px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
       />
     </label>
-  )
+  );
 }
 
 // ---- Formulario ----
 export default function ClientIntakeForm() {
-  const [data, setData] = useState<FormData>(init)
-  const [loading, setLoading] = useState(false)
-  const [ok, setOk] = useState<null | boolean>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<FormData>(init);
+  const [loading, setLoading] = useState(false);
+  const [ok, setOk] = useState<null | boolean>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true); setOk(null); setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setOk(null);
+    setError(null);
+    setMessage(null);
+
     try {
       const res = await fetch("/api/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      })
-      const txt = await res.text()
-      if (!res.ok) throw new Error(txt)
-      setOk(true)
-      setData(init)
+      });
+
+      // lee como texto y luego intenta parsear JSON (más robusto si hay errores)
+      const raw = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(raw); } catch { /* no-JSON */ }
+
+      if (!res.ok) {
+        throw new Error(json?.message || raw || "No se pudo enviar");
+      }
+
+      setOk(true);
+      setMessage(
+        json?.queued
+          ? "¡Enviado! Estamos arrancando el servidor; se procesará en cuanto esté activo."
+          : "¡Enviado correctamente!"
+      );
+      setData(init); // limpia el formulario
     } catch (err: unknown) {
-      setOk(false)
-      setError(err instanceof Error ? err.message : "Error")
+      setOk(false);
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
-      setLoading(false)
+      setLoading(false); // quita “Enviando…”
     }
   }
 
@@ -112,7 +128,7 @@ export default function ClientIntakeForm() {
 
       {/* Objetivo principal */}
       <label className="grid gap-1 text-sm">
-        <span className="text-slate-300">Objetivoooooooooo principal</span>
+        <span className="text-slate-300">Objetivo principal</span>
         <select
           value={data.objetivoPrincipal}
           onChange={(e) =>
@@ -193,7 +209,6 @@ export default function ClientIntakeForm() {
         value={data.material}
         onChange={(e) => setData({ ...data, material: e.target.value })}
       />
-
       <Textarea
         label="Mensaje (opcional)"
         placeholder="Cuéntame algo más que deba saber"
@@ -213,9 +228,10 @@ export default function ClientIntakeForm() {
         >
           {loading ? "Enviando..." : "Enviar cuestionario"}
         </button>
-        {ok === true && <span className="text-sm text-emerald-400">Recibido. Te escribiré pronto.</span>}
+
+        {message && <span className="text-sm text-emerald-400">{message}</span>}
         {ok === false && <span className="text-sm text-red-400">{error || "Error"}</span>}
       </div>
     </form>
-  )
+  );
 }
