@@ -1,6 +1,6 @@
 // frontend/src/app/api/intake/route.ts
-import { Redis } from "@upstash/redis";            // ⬅️ NUEVO
-const redis = Redis.fromEnv();                      // ⬅️ NUEVO
+import { Redis } from "@upstash/redis";            
+const redis = Redis.fromEnv();                      
 
 type Obj = "perder_peso" | "ganar_masa" | "rendimiento" | "recuperacion_lesion"
 type Dias = "1" | "2" | "3" | "4" | "5"
