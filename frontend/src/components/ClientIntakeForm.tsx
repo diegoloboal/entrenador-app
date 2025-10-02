@@ -3,6 +3,18 @@
 
 import { useState } from "react";
 
+type IntakeResponse = {
+  ok: boolean;
+  queued?: boolean;
+  leadScore?: number;
+  leadTier?: string;
+  message?: string;
+};
+
+function safeParseJSON<T>(s: string): T | null {
+  try { return JSON.parse(s) as T; } catch { return null; }
+}
+
 // ---- Tipos del formulario ----
 type FormData = {
   nombre: string;
@@ -81,13 +93,11 @@ export default function ClientIntakeForm() {
         body: JSON.stringify(data),
       });
 
-      // lee como texto y luego intenta parsear JSON (más robusto si hay errores)
       const raw = await res.text();
-      let json: any = null;
-      try { json = JSON.parse(raw); } catch { /* no-JSON */ }
+      const json = safeParseJSON<IntakeResponse>(raw);
 
       if (!res.ok) {
-        throw new Error(json?.message || raw || "No se pudo enviar");
+        throw new Error(json?.message ?? raw ?? "No se pudo enviar");
       }
 
       setOk(true);
@@ -97,7 +107,7 @@ export default function ClientIntakeForm() {
           : "¡Enviado correctamente!"
       );
       setData(init); // limpia el formulario
-    } catch (err: unknown) {
+    } catch (err) {
       setOk(false);
       setError(err instanceof Error ? err.message : "Error");
     } finally {
